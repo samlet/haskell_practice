@@ -1,6 +1,6 @@
 -- exec: collections_map
 module Main where
-import Data.Map hiding (filter)
+import Data.Map hiding (filter, foldr)
 
 main = putStrLn "Hello World"
 
@@ -23,4 +23,16 @@ findKey key ((k,v):xs) =
          Just v 
      else 
          findKey key xs
+
+-- 用 fold 怎样实现
+-- 通常，使用 ``fold`` 来替代类似的递归函数会更好些。用 ``fold`` 的代码让人一目了然，而看明白递归则得多花点脑子。
+findKey'' :: (Eq k) => k -> [(k,v)] -> Maybe v 
+findKey'' key = foldr (\(k,v) acc -> if key == k then Just v else acc) Nothing
+
+
+
+
+
+
+
 

@@ -411,6 +411,180 @@ sortBy (compare `on` length) xs
 [[],[2],[2,2],[1,2,3],[3,5,4,3],[5,4,5,4,4]]
 -- 太绝了! compare `on` length, 乖乖, 这简直就是英文! 如果你搞不清楚 on 在这里的原理, 就可以认为它与 \x y -> length x `compare` length y 等价。通常, 与带 By 的函数打交道时, 若要判断相等性, 则 (==) `on` something。若要判定大小, 则 compare `on` something.
 
+:l collections_map
+findKey "penny" phoneBook 
+Just "853-2492" 
+findKey "betty" phoneBook 
+Just "555-2938" 
+findKey "wilma" phoneBook 
+Nothing
+
+-- 由于Data.Map中的一些函数与Prelude和Data.List 模块存在命名冲突，所以我们使用 qualified import。
+import qualified Data.Map as Map
+
+-- fromList 取一个关联列表，返回一个与之等价的 Map。
+Map.fromList [("betty","555-2938"),("bonnie","452-2928"),("lucille","205-2928")] 
+fromList [("betty","555-2938"),("bonnie","452-2928"),("lucille","205-2928")] 
+Map.fromList [(1,2),(3,4),(3,2),(5,5)] 
+fromList [(1,2),(3,2),(5,5)]
+-- 若其中存在重复的键,就将其忽略。如下即 fromList 的型别声明。
+-- Map.fromList :: (Ord k) => [(k，v)] -> Map.Map k v
+-- 这表示它取一组键值对的 List，并返回一个将 k 映射为 v 的 map。注意一下，当使用普通的关联列表时，只需要键的可判断相等性就行了。而在这里，它还必须得是可排序的。这在 Data.Map 模块中是强制的。因为它会按照某顺序将其组织在一棵树中.在处理键值对时，只要键的型别属于 Ord 型别类，就应该尽量使用Data.Map.empty 返回一个空 map.
+Map.empty 
+fromList []
+-- insert 取一个键，一个值和一个 map 做参数，给这个 map 插入新的键值对，并返回一个新的 map。
+Map.empty 
+fromList [] 
+Map.insert 3 100 Map.empty
+fromList [(3,100)] 
+Map.insert 5 600 (Map.insert 4 200 ( Map.insert 3 100  Map.empty)) 
+fromList [(3,100),(4,200),(5,600)]
+Map.insert 5 600 . Map.insert 4 200 . Map.insert 3 100 $ Map.empty 
+fromList [(3,100),(4,200),(5,600)]
+-- 通过 empty，insert 与 fold，我们可以编写出自己的 fromList。
+-- fromList' :: (Ord k) => [(k,v)] -> Map.Map k v 
+fromList' = foldr (\(k,v) acc -> Map.insert k v acc) Map.empty
+-- 简洁明了的 fold！ 从一个空的 map 开始，然后从右折叠，随着遍历不断地往 map 中插入新的键值对.
+-- null 检查一个 map 是否为空.
+Map.null Map.empty 
+True 
+Map.null $ Map.fromList [(2,3),(5,5)] 
+False
+-- size 返回一个 map 的大小。
+Map.size Map.empty 
+0 
+Map.size $ Map.fromList [(2,4),(3,3),(4,2),(5,4),(6,4)] 
+5
+-- singleton 取一个键值对做参数,并返回一个只含有一个映射的 map.
+Map.singleton 3 9 
+fromList [(3,9)] 
+Map.insert 5 9 $ Map.singleton 3 9 
+fromList [(3,9),(5,9)]
+-- lookup 与 Data.List 的 lookup 很像,只是它的作用对象是 map，如果它找到键对应的值。就返回Just something，否则返回 Nothing。
+-- member 是个判断函数，它取一个键与 map 做参数，并返回该键是否存在于该 map。
+Map.member 3 $ Map.fromList [(3,6),(4,3),(6,9)] 
+True 
+Map.member 3 $ Map.fromList [(2,5),(4,5)] 
+False
+-- map 与 filter 与其对应的 List 版本很相似:
+Map.map (*100) $ Map.fromList [(1,1),(2,4),(3,9)] 
+fromList [(1,100),(2,400),(3,900)] 
+
+import Data.Char
+Map.filter isUpper $ Map.fromList [(1,'a'),(2,'A'),(3,'b'),(4,'B')] 
+fromList [(2,'A'),(4,'B')]
+-- toList 是 fromList 的反函数。
+Map.toList . Map.insert 9 2 $ Map.singleton 4 3 
+[(4,3),(9,2)]
+-- keys 与 elems 各自返回一组由键或值组成的 List，keys 与 map fst . Map.toList 等价，elems 与map snd . Map.toList等价. fromListWith 是个很酷的小函数，它与 fromList 很像，只是它不会直接忽略掉重复键，而是交给一个函数来处理它们。假设一个姑娘可以有多个号码，而我们有个像这样的关联列表:
+:{
+phoneBook =   
+    [("betty","555-2938")  
+    ,("betty","342-2492")  
+    ,("bonnie","452-2928")  
+    ,("patsy","493-2928")  
+    ,("patsy","943-2929")  
+    ,("patsy","827-9162")  
+    ,("lucille","205-2928")  
+    ,("wendy","939-8282")  
+    ,("penny","853-2492")  
+    ,("penny","555-2111")  
+    ]
+ :}
+-- 如果用 fromList 来生成 map，我们会丢掉许多号码! 如下才是正确的做法:
+-- phoneBookToMap :: (Ord k) => [(k, String)] -> Map.Map k String  
+phoneBookToMap xs = Map.fromListWith (\number1 number2 -> number1 ++ ", " ++ number2) xs
+Map.lookup "patsy" $ phoneBookToMap phoneBook 
+"827-9162, 943-2929, 493-2928" 
+Map.lookup "wendy" $ phoneBookToMap phoneBook
+"939-8282" 
+Map.lookup "betty" $ phoneBookToMap phoneBook 
+"342-2492，555-2938"
+-- 一旦出现重复键，这个函数会将不同的值组在一起，同样，也可以缺省地将每个值放到一个单元素的 List 中，再用 ++ 将他们都连接在一起。
+-- phoneBookToMap :: (Ord k) => [(k，a)] -> Map.Map k [a] 
+phoneBookToMap xs = Map.fromListWith (++) $ map (\(k,v) -> (k,[v])) xs 
+Map.lookup "patsy" $ phoneBookToMap phoneBook 
+["827-9162","943-2929","493-2928"]
+-- 很简洁! 它还有别的玩法，例如在遇到重复元素时，单选最大的那个值.
+Map.fromListWith max [(2,3),(2,5),(2,100),(3,29),(3,22),(3,11),(4,22),(4,15)] 
+fromList [(2,100),(3,29),(4,22)]
+-- 或是将相同键的值都加在一起.
+Map.fromListWith (+) [(2,3),(2,5),(2,100),(3,29),(3,22),(3,11),(4,22),(4,15)] 
+fromList [(2,108),(3,62),(4,37)]
+-- insertWith 之于 insert，恰如 fromListWith 之于 fromList。它会将一个键值对插入一个 map 之中，而该 map 若已经包含这个键，就问问这个函数该怎么办。
+Map.insertWith (+) 3 100 $ Map.fromList [(3,4),(5,103),(6,339)] 
+fromList [(3,104),(5,103),(6,339)]
+-- Data.Map 里面还有不少函数，[http://www.haskell.org/ghc/docs/latest/html/libraries/containers/Data-Map.html 这个文档]中的列表就很全了.
+
+-- Data.Set 模块提供了对数学中集合的处理。集合既像 List 也像 Map: 它里面的每个元素都是唯一的，且内部的数据由一棵树来组织(这和 Data.Map 模块的 map 很像)，必须得是可排序的。同样是插入,删除,判断从属关系之类的操作，使用集合要比 List 快得多。对一个集合而言，最常见的操作莫过于并集，判断从属或是将集合转为 List.
+-- 由于 Data.Set 模块与 Prelude 模块和 Data.List 模块中存在大量的命名冲突，所以我们使用qualified import
+
+import qualified Data.Set as Set
+text1 = "I just had an anime dream. Anime... Reality... Are they so different?"  
+text2 = "The old man left his garbage can out and now his trash is all over my lawn!"
+
+-- fromList 函数同你想的一样，它取一个 List 作参数并将其转为一个集合
+let set1 = Set.fromList text1  
+let set2 = Set.fromList text2  
+set1  
+fromList " .?AIRadefhijlmnorstuy"  
+set2  
+fromList " !Tabcdefghilmnorstuvwy"
+-- 如你所见，所有的元素都被排了序。而且每个元素都是唯一的。现在我们取它的交集看看它们共同包含的元素:
+Set.intersection set1 set2  
+fromList " adefhilmnorstuy"
+-- 使用 difference 函数可以得到存在于第一个集合但不在第二个集合的元素
+Set.difference set1 set2  
+fromList ".?AIRj"  
+Set.difference set2 set1  
+fromList "!Tbcgvw"
+-- 也可以使用 union 得到两个集合的并集
+Set.union set1 set2  
+fromList " !.?AIRTabcdefghijlmnorstuvwy"
+-- null，size，member，empty，singleton，insert，delete 这几个函数就跟你想的差不多啦
+Set.null Set.empty  
+True  
+Set.null $ Set.fromList [3,4,5,5,4,3]  
+False  
+Set.size $ Set.fromList [3,4,5,3,4,5]  
+3  
+Set.singleton 9  
+fromList [9]  
+Set.insert 4 $ Set.fromList [9,3,8,1]  
+fromList [1,3,4,8,9]  
+Set.insert 8 $ Set.fromList [5..10]  
+fromList [5,6,7,8,9,10]  
+Set.delete 4 $ Set.fromList [3,4,5,4,3,4,5]  
+fromList [3,5]
+-- 也可以判断子集与真子集，如果集合 A 中的元素都属于集合 B，那么 A 就是 B 的子集, 如果 A 中的元素都属于 B 且 B 的元素比 A 多，那 A 就是 B 的真子集
+Set.fromList [2,3,4] `Set.isSubsetOf` Set.fromList [1,2,3,4,5]  
+True  
+Set.fromList [1,2,3,4,5] `Set.isSubsetOf` Set.fromList [1,2,3,4,5]  
+True  
+Set.fromList [1,2,3,4,5] `Set.isProperSubsetOf` Set.fromList [1,2,3,4,5]  
+False  
+Set.fromList [2,3,4,8] `Set.isSubsetOf` Set.fromList [1,2,3,4,5]  
+False
+-- 对集合也可以执行 map 和 filter:
+Set.filter odd $ Set.fromList [3,4,5,6,7,2,3,4]  
+fromList [3,5,7]  
+Set.map (+1) $ Set.fromList [3,4,5,6,7,2,3,4]  
+fromList [3,4,5,6,7,8]
+-- 集合有一常见用途，那就是先 fromList 删掉重复元素后再 toList 转回去。尽管 Data.List 模块的nub 函数完全可以完成这一工作，但在对付大 List 时则会明显的力不从心。使用集合则会快很多，nub函数只需 List 中的元素属于 Eq 型别类就行了，而若要使用集合，它必须得属于 Ord 型别类
+let setNub xs = Set.toList $ Set.fromList xs  
+setNub "HEY WHATS CRACKALACKIN"  
+" ACEHIKLNRSTWY"  
+
+import qualified Data.List as List
+List.nub "HEY WHATS CRACKALACKIN"  
+"HEY WATSCRKLIN"
+-- 在处理较大的 List 时，setNub 要比 nub 快，但也可以从中看出，nub 保留了 List 中元素的原有顺序，而 setNub 不。
+
+
+
+
+
+
 
 
 

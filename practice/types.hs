@@ -80,6 +80,11 @@ lockers = Map.fromList
     ,(110,(Taken,"99292"))
     ]
 
+-- Recursive data structures (递归地定义数据结构)
+
+-- 新的语法结构：fixity 宣告。当我们定义函数成 operator，我们能同时指定 fixity (但并不是必须的)。fixity 指定了他应该是 left-associative 或是 right-associative，还有他的优先级。例如说，* 的 fixity 是 infixl 7 *，而 + 的 fixity 是 infixl 6。代表他们都是 left-associative。(4 * 3 * 2) 等于((4 * 3) * 2)。但 * 拥有比 + 更高的优先级。所以 5 * 4 + 3 会是 (5 * 4) + 3。
+-- 这样我们就可以写成 a :-: (List a) 而不是 Cons a (List a)：
+
 infixr 5 :-:
 data List a = Empty | a :-: (List a) deriving (Show, Read, Eq, Ord)
 

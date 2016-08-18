@@ -1,0 +1,5 @@
+#!/bin/bash
+ghc --make cli_procs.hs
+./cli_procs first second w00t "multi word arg"
+
+

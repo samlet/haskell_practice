@@ -90,6 +90,16 @@ let xs = [(1,3), (4,3), (2,4), (5,3), (5,6), (3,1)]
 [a+b | (a,b) <- xs]  
 [4,7,6,8,11,4]
 
+-- 祝你生日快乐！
+-- http://www.vaikan.com/10-haskell-one-liners-to-impress-your-friends/
+mapM_ putStrLn ["Happy Birthday " ++ (if x == 3 then "dear NAME" else "to You") | x <- [1..4]]
+-- Happy Birthday to You
+-- Happy Birthday to You
+-- Happy Birthday dear NAME
+-- Happy Birthday to You
+
+
+
 
 
 

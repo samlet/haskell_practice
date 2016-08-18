@@ -1,4 +1,6 @@
 #!/bin/bash
-ghc --make simple.hs
-./simple
+prog=simple
+ghc --make $prog.hs
+./$prog
+
 
